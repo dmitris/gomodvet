@@ -5,6 +5,7 @@ package vet
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"regexp"
 	"sort"
@@ -212,6 +213,12 @@ func ExcludedVersion(verbose bool) (bool, error) {
 			// enforces this on a 'go build', 'go mod tidy', etc.
 			continue
 		}
+		if !fileExists(mod.GoMod) {
+			if verbose {
+				fmt.Printf("gomodvet-005: go.mod file %s doesn't exist\n", mod.GoMod)
+			}
+			continue
+		}
 		file, err := modfile.Parse(mod.GoMod)
 		if err != nil {
 			return false, report(err)
@@ -281,7 +288,7 @@ func PseudoVersion(verbose bool) (bool, error) {
 
 // Replace reports if the current go.mod has 'replace' directives.
 // It returns true if so.
-// The parses the 'go.mod' for the main module, and hence can report
+// It parses the 'go.mod' for the main module, and hence can report
 // true if the main module's 'go.mod' has ineffective replace directives.
 // Part of the use case is some people never want to check in a replace directive,
 // and this can be used to check that.
@@ -299,6 +306,12 @@ func Replace(verbose bool) (bool, error) {
 		}
 		if verbose {
 			fmt.Printf("gomodvet: replacement: module %s: %+v\n", mod.Path, mod)
+		}
+		if !fileExists(mod.GoMod) {
+			if verbose {
+				fmt.Printf("gomodvet: replacement: go.mod file %s doesn't exist\n", mod.GoMod)
+			}
+			continue
 		}
 		file, err := modfile.Parse(mod.GoMod)
 		if err != nil {
@@ -352,3 +365,13 @@ func isV2OrHigherIncompat(version string) bool {
 //        or maybe if any go.mod have invalid semver tags for require?
 //        go mod edit -json reject 'bad' as semver tag... so no need?
 //        add test? 'require foo bad' -> invalid module version "bad": unknown revision bad
+
+// fileExists reports checks whether the given exists.
+func fileExists(name string) bool {
+	if _, err := os.Stat(name); err != nil {
+		if os.IsNotExist(err) {
+			return false
+		}
+	}
+	return true
+}

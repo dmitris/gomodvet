@@ -46,9 +46,8 @@ type Replace struct {
 func Parse(goModFilepath string) (File, error) {
 	var result File
 	out, err := exec.Command("go", "mod", "edit", "-json", goModFilepath).Output()
-
 	if err != nil {
-		return result, fmt.Errorf("error invoking 'go mod edit -json': %v", err)
+		return result, fmt.Errorf("error invoking 'go mod edit -json %s': %v", goModFilepath, err)
 	}
 
 	dec := json.NewDecoder(bytes.NewReader(out))
